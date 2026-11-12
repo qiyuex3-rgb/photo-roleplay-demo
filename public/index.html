@@ -43,23 +43,23 @@
   --r1:#97A3B2; --r2:#8DB4F2; --r3:#C7A0F2; --r4:#F2C26B;
 }
 *{box-sizing:border-box}
-html,body{margin:0}
+html,body{margin:0;height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.6}
 button{font:inherit;color:inherit;cursor:pointer}
 button:focus-visible,label:focus-within{outline:2px solid var(--p);outline-offset:2px}
 
-.page{max-width:1080px;margin:0 auto;padding:28px 20px 40px;display:flex;flex-direction:column;gap:20px}
-.top{display:flex;flex-wrap:wrap;gap:14px 32px;align-items:flex-end;justify-content:space-between}
-h1{font-family:var(--display);font-size:26px;line-height:1.3;margin:0 0 4px}
-.top p{margin:0;color:var(--muted);max-width:36em}
+.page{max-width:1280px;height:100%;margin:0 auto;padding:14px 20px 16px;display:flex;flex-direction:column;gap:12px}
+.top{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:center;justify-content:space-between;flex:none}
+.top>div:first-child{display:flex;align-items:baseline;gap:14px;min-width:0}
+h1{font-family:var(--display);font-size:21px;line-height:1.3;margin:0;white-space:nowrap}
+.top p{margin:0;color:var(--muted);font-size:13px}
 .seg{display:flex;flex-wrap:wrap;background:var(--sunken);border-radius:10px;padding:3px;gap:3px}
 .seg button{border:0;background:transparent;border-radius:8px;padding:7px 16px;font-size:14px;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.12)}
 
-.main{display:grid;grid-template-columns:380px minmax(0,1fr);gap:28px;align-items:start}
-@media (max-width:860px){.main{grid-template-columns:minmax(0,1fr)}.phone{margin:0 auto}}
+.main{flex:1;min-height:0;display:grid;grid-template-columns:400px minmax(0,1fr);gap:20px;align-items:stretch}
 
-.phone{position:relative;width:100%;max-width:380px;height:760px;background:var(--surface);border:1px solid var(--line);border-radius:28px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 32px rgba(20,30,45,.10)}
+.phone{position:relative;width:100%;max-width:400px;height:100%;min-height:0;background:var(--surface);border:1px solid var(--line);border-radius:28px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 32px rgba(20,30,45,.10)}
 .ph-head{display:flex;gap:10px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
 .ava{width:38px;height:38px;border-radius:50%;background:var(--p);color:var(--surface);display:grid;place-items:center;font-family:var(--display);font-size:17px;flex:none}
 .ph-head b{display:block;line-height:1.2}
@@ -91,7 +91,7 @@ h1{font-family:var(--display);font-size:26px;line-height:1.3;margin:0 0 4px}
 .ai .bubble{background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:5px}
 .ai .bubble.ask{border-color:var(--p)}
 .need{font-size:11px;color:var(--p)}
-.photo{display:block;max-width:220px;max-height:260px;border-radius:14px;border:1px solid var(--line);object-fit:cover}
+.photo{display:block;max-width:200px;max-height:180px;border-radius:14px;border:1px solid var(--line);object-fit:cover}
 .typing{display:flex;gap:4px;padding:4px 2px}
 .typing i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:blink 1s infinite}
 .typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
@@ -132,10 +132,10 @@ h1{font-family:var(--display);font-size:26px;line-height:1.3;margin:0 0 4px}
 .tier{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
 .notice{font-size:13px;color:var(--warn);background:var(--warn-bg);border-radius:10px;padding:8px 12px}
 
-.panel{display:flex;flex-direction:column;gap:16px;min-width:0}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.panel{display:flex;flex-direction:column;gap:12px;min-width:0;min-height:0;height:100%;overflow-y:auto;padding-right:4px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;flex:none}
 .card h2{font-size:13px;font-weight:500;color:var(--muted);margin:0 0 10px;letter-spacing:.04em}
-.card h3{font-size:13px;font-weight:500;color:var(--muted);margin:14px 0 6px}
+.card h3{font-size:13px;font-weight:500;color:var(--muted);margin:10px 0 4px}
 .card p{margin:0}
 .card p+p{margin-top:6px}
 .meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
@@ -152,6 +152,14 @@ pre{margin:8px 0 0;padding:10px 12px;background:var(--sunken);border-radius:10px
 .bag img{width:40px;height:40px;border-radius:8px;object-fit:cover;border:1px solid var(--line);flex:none}
 .bag small{color:var(--muted);display:block;font-size:12px}
 .foot{font-size:12px;color:var(--muted);margin:0}
+@media (max-width:860px){
+  html,body{height:auto}
+  .page{height:auto}
+  .top p{display:none}
+  .main{display:flex;flex-direction:column}
+  .phone{margin:0 auto;height:calc(100dvh - 110px);min-height:520px}
+  .panel{height:auto;overflow:visible;padding-right:0}
+}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 </head>
@@ -160,7 +168,7 @@ pre{margin:8px 0 0;padding:10px 12px;background:var(--sunken);border-radius:10px
   <header class="top">
     <div>
       <h1>图片入戏</h1>
-      <p>拍一张或选一张真实照片发给角色。页面会把照片交给模型识别，再按当前剧本生成角色的回应。右侧显示这次调用实际返回了什么。</p>
+      <p>发一张真实照片给角色，右侧显示模型返回了什么。</p>
     </div>
     <div class="seg" id="modeSeg">
       <button type="button" data-m="d2" aria-pressed="true">现实道具召唤</button>
