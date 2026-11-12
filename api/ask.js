@@ -38,7 +38,8 @@ async function callGateway(payload) {
 
 module.exports = async (req, res) => {
   const ACCESS = process.env.ACCESS_CODE || '';
-  if (req.method === 'GET') return res.status(200).json({ needCode: !!ACCESS });
+  // GET 只返回各项是否已配置（true/false），不返回任何值，方便排查环境变量
+  if (req.method === 'GET') return res.status(200).json({ needCode: !!ACCESS, configured: { GATEWAY_KEY: !!process.env.GATEWAY_KEY, GATEWAY_BASE_URL: !!BASE, GATEWAY_MODEL: !!MODEL } });
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
   if (!process.env.GATEWAY_KEY || !BASE || !MODEL) return res.status(500).json({ error: 'not_configured' });
 
