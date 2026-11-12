@@ -163,8 +163,7 @@ pre{margin:8px 0 0;padding:10px 12px;background:var(--sunken);border-radius:10px
       <p>拍一张或选一张真实照片发给角色。页面会把照片交给模型识别，再按当前剧本生成角色的回应。右侧显示这次调用实际返回了什么。</p>
     </div>
     <div class="seg" id="modeSeg">
-      <button type="button" data-m="d1" aria-pressed="false">Demo 1 · 单次召唤</button>
-      <button type="button" data-m="d2" aria-pressed="true">Demo 2 · 连续剧情</button>
+      <button type="button" data-m="d2" aria-pressed="true">现实道具召唤</button>
       <button type="button" data-m="puzzle" aria-pressed="false">视觉解谜</button>
     </div>
   </header>
@@ -454,7 +453,7 @@ function renderPanel(){
     h += st.mode==='d1'
       ? `<div class="card"><h2>Demo 1：单次召唤</h2><ol class="list"><li>角色在剧情节点开口要一件东西。</li><li>你发一张真实照片，页面连同剧本设定一起交给模型。</li><li>模型先客观识别物品，再按世界观把它转译成道具，写出角色回应和剧情走向。</li><li>每次发图互相独立，不带上下文，也不能打字。适合对比同一张照片在不同剧本里的反应。</li></ol></div>`
       : st.mode==='d2'
-      ? `<div class="card"><h2>Demo 2：连续剧情</h2><ol class="list"><li>角色在剧情节点开口要一件东西。</li><li>你发一张真实照片，页面连同剧本设定一起交给模型。</li><li>模型先客观识别物品，再按世界观把它转译成道具，写出角色回应和剧情走向。</li><li>道具进入道具栏，剧情往前走一步。之后可以继续打字聊天，角色只在剧情需要时再要下一件东西。</li></ol></div>`
+      ? `<div class="card"><h2>现实道具召唤是怎么跑的</h2><ol class="list"><li>角色在剧情节点开口要一件东西。</li><li>你发一张真实照片，页面连同剧本设定一起交给模型。</li><li>模型先客观识别物品，再按世界观把它转译成道具，写出角色回应和剧情走向。</li><li>道具进入道具栏，剧情往前走一步。之后可以继续打字聊天，角色只在剧情需要时再要下一件东西。</li></ol></div>`
       : `<div class="card"><h2>视觉解谜是怎么跑的</h2><ol class="list"><li>每道锁有一条明确的通关条件：蓝色、圆形、数字。</li><li>你发一张真实照片，模型判断是否满足条件，并给出依据和把握程度。</li><li>不通过时由角色在戏里催你再找，并给一句提示。</li><li>通过后可以打字聊天。聊几轮之后，下一道锁才会在剧情里出现，出现时只能发照片。</li></ol></div>`;
   } else if(L.kind==='chat'){
     const d = L.data;
