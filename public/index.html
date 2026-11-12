@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>图片入戏 实拍 Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600&display=swap" rel="stylesheet">
+<style>
+/* layout: left = phone chat where you send a real photo, right = engine view of what the model returned for it */
+:root{
+  --bg:#ECEFF2; --surface:#FFFFFF; --sunken:#E0E5EA; --line:#CFD6DD;
+  --ink:#161C24; --muted:#586472;
+  --me-bg:#1C2530; --me-fg:#F1F4F7;
+  --p:#0D6E6A; --p-soft:#D9EEEC;
+  --ok:#1E7A3C; --ok-bg:#DDF1E3; --bad:#A8322A; --bad-bg:#F8E1DE;
+  --warn:#9A5B00; --warn-bg:#FBEFD5;
+  --r1:#586472; --r2:#2C62B8; --r3:#7A43B6; --r4:#B36B00;
+  --display:"Noto Serif SC","Songti SC","SimSun",serif;
+  --body:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#10141A; --surface:#19202A; --sunken:#232C38; --line:#323D4B;
+    --ink:#E6EBF1; --muted:#97A3B2;
+    --me-bg:#DCE3EA; --me-fg:#161C24;
+    --p:#62CFC6; --p-soft:#143533;
+    --ok:#7FD99A; --ok-bg:#16321F; --bad:#F29A92; --bad-bg:#3D1B18;
+    --warn:#F2C26B; --warn-bg:#3A2E14;
+    --r1:#97A3B2; --r2:#8DB4F2; --r3:#C7A0F2; --r4:#F2C26B;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#10141A; --surface:#19202A; --sunken:#232C38; --line:#323D4B;
+  --ink:#E6EBF1; --muted:#97A3B2;
+  --me-bg:#DCE3EA; --me-fg:#161C24;
+  --p:#62CFC6; --p-soft:#143533;
+  --ok:#7FD99A; --ok-bg:#16321F; --bad:#F29A92; --bad-bg:#3D1B18;
+  --warn:#F2C26B; --warn-bg:#3A2E14;
+  --r1:#97A3B2; --r2:#8DB4F2; --r3:#C7A0F2; --r4:#F2C26B;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.6}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,label:focus-within{outline:2px solid var(--p);outline-offset:2px}
+
+.page{max-width:1080px;margin:0 auto;padding:28px 20px 40px;display:flex;flex-direction:column;gap:20px}
+.top{display:flex;flex-wrap:wrap;gap:14px 32px;align-items:flex-end;justify-content:space-between}
+h1{font-family:var(--display);font-size:26px;line-height:1.3;margin:0 0 4px}
+.top p{margin:0;color:var(--muted);max-width:36em}
+.seg{display:flex;flex-wrap:wrap;background:var(--sunken);border-radius:10px;padding:3px;gap:3px}
+.seg button{border:0;background:transparent;border-radius:8px;padding:7px 16px;font-size:14px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+
+.main{display:grid;grid-template-columns:380px minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:860px){.main{grid-template-columns:minmax(0,1fr)}.phone{margin:0 auto}}
+
+.phone{position:relative;width:100%;max-width:380px;height:760px;background:var(--surface);border:1px solid var(--line);border-radius:28px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 32px rgba(20,30,45,.10)}
+.ph-head{display:flex;gap:10px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
+.ava{width:38px;height:38px;border-radius:50%;background:var(--p);color:var(--surface);display:grid;place-items:center;font-family:var(--display);font-size:17px;flex:none}
+.ph-head b{display:block;line-height:1.2}
+.status{font-size:12px;color:var(--muted)}
+.status.busy{color:var(--p)}
+.locks{margin-left:auto;display:flex;gap:5px;align-items:center;font-size:11px;color:var(--muted)}
+.locks i{width:18px;height:4px;border-radius:2px;background:var(--sunken)}
+.locks i.done{background:var(--p)}
+.ibtn{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-family:var(--display);font-style:italic;font-size:15px;line-height:1;flex:none;margin-left:8px;padding:0}
+.ibtn:hover{border-color:var(--p);color:var(--p)}
+.info{position:absolute;inset:0;background:var(--surface);z-index:5;display:flex;flex-direction:column}
+.info[hidden]{display:none}
+.info-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.info-head b{font-family:var(--display);font-size:18px;flex:1;min-width:0}
+.info-head button{border:0;background:var(--sunken);border-radius:999px;padding:4px 14px;font-size:13px}
+.info-body{flex:1;overflow-y:auto;padding:14px 18px 20px;display:flex;flex-direction:column;gap:14px}
+.info-body h3{font-size:12px;font-weight:500;color:var(--muted);margin:0 0 4px;letter-spacing:.04em}
+.info-body p{margin:0;font-size:14px}
+.info-body .tags{display:flex;flex-wrap:wrap;gap:6px}
+.info-body .tags span{font-size:12px;border-radius:999px;padding:1px 10px;border:1px solid var(--p);color:var(--p)}
+
+.chat{flex:1;overflow-y:auto;padding:14px 14px 8px;display:flex;flex-direction:column;gap:12px;background:var(--bg)}
+.narr{align-self:center;text-align:center;font-family:var(--display);font-size:13px;color:var(--muted);max-width:88%;line-height:1.7}
+.row{display:flex;flex-direction:column;gap:4px;max-width:86%}
+.row.me{align-self:flex-end;align-items:flex-end}
+.row.ai{align-self:flex-start;align-items:flex-start}
+.bubble{border-radius:16px;padding:9px 12px;word-break:break-word}
+.me .bubble{background:var(--me-bg);color:var(--me-fg);border-bottom-right-radius:5px}
+.ai .bubble{background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:5px}
+.ai .bubble.ask{border-color:var(--p)}
+.need{font-size:11px;color:var(--p)}
+.photo{display:block;max-width:220px;max-height:260px;border-radius:14px;border:1px solid var(--line);object-fit:cover}
+.typing{display:flex;gap:4px;padding:4px 2px}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:blink 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes blink{50%{opacity:.25}}
+.sys{align-self:center;font-size:12px;color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:4px 12px;max-width:90%;text-align:center}
+.verdict{align-self:center;font-size:12px;font-weight:500;border-radius:8px;padding:4px 12px;max-width:90%;text-align:center}
+.verdict.ok{color:var(--ok);background:var(--ok-bg)}
+.verdict.no{color:var(--bad);background:var(--bad-bg)}
+.item{align-self:stretch;background:var(--surface);border:1px solid var(--p);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;animation:rise .3s ease-out}
+@keyframes rise{from{transform:translateY(6px);opacity:0}}
+.item-top{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.item-top b{font-family:var(--display);font-size:17px}
+.rar{font-size:11px;border-radius:999px;padding:0 9px;border:1px solid currentColor}
+.rar.r1{color:var(--r1)}.rar.r2{color:var(--r2)}.rar.r3{color:var(--r3)}.rar.r4{color:var(--r4)}
+.attrs{display:flex;flex-wrap:wrap;gap:6px}
+.attrs span{font-size:12px;background:var(--sunken);border-radius:6px;padding:1px 8px}
+.item small{color:var(--muted);font-size:12.5px}
+.ending{align-self:stretch;background:var(--surface);border:1px solid var(--p);border-radius:16px;padding:12px 14px;font-size:13.5px}
+.ending b{font-family:var(--display);font-size:16px;display:block}
+
+.tray{border-top:1px solid var(--line);padding:10px 12px 14px;display:flex;flex-direction:column;gap:9px;background:var(--surface)}
+.tray>span{font-size:12px;color:var(--muted)}
+.scenes{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.scenes button{flex:none;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:3px 12px;font-size:13px}
+.scenes button[aria-pressed="true"]{border-color:var(--p);background:var(--p-soft);color:var(--p);font-weight:500}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.act{border:0;background:var(--p);color:var(--surface);border-radius:12px;padding:10px;font-weight:500;text-align:center;cursor:pointer;position:relative}
+.act.alt{background:var(--sunken);color:var(--ink)}
+.act.wide{grid-column:1/-1}
+.act input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.act.off{opacity:.45;pointer-events:none}
+.say{display:flex;gap:7px}
+.say input{flex:1;min-width:0;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+.say input:focus{outline:2px solid var(--p);outline-offset:1px}
+.say button{border:0;background:var(--p);color:var(--surface);border-radius:12px;padding:0 16px;font-weight:500}
+.say button:disabled,.say input:disabled{opacity:.5}
+.acts.small .act{padding:7px;font-size:13.5px;font-weight:400;background:var(--sunken);color:var(--ink)}
+.tier{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+.notice{font-size:13px;color:var(--warn);background:var(--warn-bg);border-radius:10px;padding:8px 12px}
+
+.panel{display:flex;flex-direction:column;gap:16px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.card h2{font-size:13px;font-weight:500;color:var(--muted);margin:0 0 10px;letter-spacing:.04em}
+.card h3{font-size:13px;font-weight:500;color:var(--muted);margin:14px 0 6px}
+.card p{margin:0}
+.card p+p{margin-top:6px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.tag{font-size:12px;border-radius:999px;padding:1px 10px;border:1px solid var(--p);color:var(--p)}
+.tag.ok{border-color:var(--ok);color:var(--ok)}.tag.no{border-color:var(--bad);color:var(--bad)}
+.list{margin:0;padding-left:1.2em}
+.map{display:grid;grid-template-columns:minmax(0,2fr) 1.2em minmax(0,3fr);gap:6px;align-items:start}
+.map span:nth-child(3n+2){color:var(--muted)}
+.map span:nth-child(3n){font-family:var(--display);font-size:14px}
+details summary{cursor:pointer;color:var(--muted);font-size:13px}
+pre{margin:8px 0 0;padding:10px 12px;background:var(--sunken);border-radius:10px;font-size:12px;line-height:1.5;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+.bag{display:flex;flex-direction:column;gap:8px}
+.bag div{display:flex;gap:10px;align-items:center}
+.bag img{width:40px;height:40px;border-radius:8px;object-fit:cover;border:1px solid var(--line);flex:none}
+.bag small{color:var(--muted);display:block;font-size:12px}
+.foot{font-size:12px;color:var(--muted);margin:0}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <div>
+      <h1>图片入戏</h1>
+      <p>拍一张或选一张真实照片发给角色。页面会把照片交给模型识别，再按当前剧本生成角色的回应。右侧显示这次调用实际返回了什么。</p>
+    </div>
+    <div class="seg" id="modeSeg">
+      <button type="button" data-m="d1" aria-pressed="false">Demo 1 · 单次召唤</button>
+      <button type="button" data-m="d2" aria-pressed="true">Demo 2 · 连续剧情</button>
+      <button type="button" data-m="puzzle" aria-pressed="false">视觉解谜</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <section class="phone" aria-label="剧情聊天">
+      <div class="ph-head">
+        <div class="ava" id="ava"></div>
+        <div><b id="cname"></b><span class="status" id="status">在线</span></div>
+        <div class="locks" id="locks"></div>
+        <button type="button" class="ibtn" id="infoBtn" aria-label="剧情简介" title="剧情简介">i</button>
+      </div>
+      <div class="info" id="info" hidden></div>
+      <div class="chat" id="chat"></div>
+      <div class="tray" id="tray"></div>
+    </section>
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+  </div>
+</div>
+
+<script>
+const SCENES = [
+ {tag:'Neon Void strain', genre:'科幻 / 赛博朋克 / 近未来，世界观观光向',
+  world:'Vice City（罪恶都市），一座永不沉睡的城市：全息广告牌、自动化餐厅、反重力飞行汽车，街上也还跑着被当作旧时代遗物的汽油车。贫富差距极大，富人住市中心高层，贫民区聚集着被淘汰的旧机器人。义眼、义肢、神经连接终端、脑内芯片等义体技术很普及。每个市民有电子 ID。日常吃的是合成食品和人工培育肉，天然农产品是只有富人才吃得起的高级品。还有可以体验五感的虚拟世界 Brain Dive。',
+  char:'Pulse', ava:'P',
+  persona:'25 岁，住在高层公寓顶层的远程软件工程师。自信、理性、头脑转得快，有绅士风度，偶尔强势，神秘而带一点诱导和暧昧。永远冷静，从不提高音量，绝不说粗话，有时句尾会拖长。自称"我"，称呼对方"你"。咖啡成瘾，只喝黑咖啡。爱好是淘廉价旧零件和旧物、组装电脑、摆弄机械、解逻辑谜题和数独。对方是一位比他年轻的女性，之前误入危险街区时被他带了出来',
+  setup:'Vice City 的夜晚。Pulse 把你带出小巷，黑色飞行汽车停在路边，车底的紫色灯光映在地上。',
+  ask:'这座城市里，随身带的东西最能说明一个人。你身上有什么？拿出来让我看看……我对旧东西一向没什么抵抗力。',
+  rules:'这是一个安全的观光向剧场。剧情里绝对不能出现事故、突发事件、袭击、犯罪、威胁、紧急事态、逃脱，用户和角色都不会遇到任何危险。Pulse 不会说粗话、不会使用暴力、不会做让对方讨厌的事，也不会移情别恋。道具的用途和剧情走向只能是逛城市、聊天、改装小玩意、解谜、吃喝这类平和的内容。转译时多利用这个世界的反差：现实里普通的东西在这里可能是旧时代遗物、稀有的天然制品，或者可以改装的零件。'},
+ {tag:'奇幻 · 祭品', genre:'奇幻 / 异世界', world:'有精灵、封印和古老禁地的异世界。现实物品穿过"门"之后会显露出它在这个世界的真身。', char:'希尔', ava:'希', persona:'精灵向导，轻快、爱打趣，但对禁地心存敬畏',
+  setup:'你们站在禁地的石门前，门上的符文正在等待一件祭品。', ask:'进入禁地需要一件祭品。把你愿意献出的东西给我看看。'},
+ {tag:'奇幻 · 齿轮', genre:'奇幻 / 异世界', world:'有精灵、封印和古老机关的异世界。现实物品穿过"门"之后会显露出它在这个世界的真身。', char:'希尔', ava:'希', persona:'精灵向导，轻快、爱打趣，危急时语速很快',
+  setup:'遗迹的石门正在合拢，巨大的齿轮一格一格转动。', ask:'门马上就要锁死了！你有没有什么东西能卡住齿轮？快给我看看！'},
+ {tag:'恋爱', genre:'都市恋爱', world:'现代都市。你和顾言认识三年，关系一直停在差一步的位置。', char:'顾言', ava:'言', persona:'克制、话少，情绪藏得深，偶尔一句话很重',
+  setup:'天台，晚风。你说有东西要给他。', ask:'你说有东西要给我？……拿出来吧，我看着呢。'},
+ {tag:'冒险', genre:'遗迹冒险', world:'失落文明的地下遗迹，机关和纹章遍布，任何小物件都可能是钥匙。', char:'老K', ava:'K', persona:'遗迹猎人，粗粝、幽默，见多识广',
+  setup:'遗迹入口的石台上有一个空着的凹槽。', ask:'入口的石台缺了一块东西。你包里有什么？掏出来我看看。'},
+ {tag:'校园', genre:'校园日常悬念', world:'一所普通高中，学生会在调查一桩流传了一年的小谜团。', char:'林夏', ava:'夏', persona:'学生会长，认真、好奇心重，说话干脆',
+  setup:'放学后的学生会室，失物招领箱摆在桌上。', ask:'你说在旧教学楼捡到了东西？给我看看，说不定和去年那件事有关。'},
+ {tag:'悬疑', genre:'刑侦悬疑', world:'一桩失踪案正在调查中，任何物证都可能改变案情走向。', char:'周警官', ava:'周', persona:'冷静、审慎，观察细节，不轻易下结论',
+  setup:'询问室，桌上只有一盏灯。', ask:'你说在现场附近捡到了东西。放到桌上，让我看看。'}
+];
+const LOCKS = [
+ {name:'颜色锁', rule:'画面里有明显的蓝色区域（物体、背景、天空都算）', ask:'安全门的识别系统坏了，现在只认颜色。找一个包含蓝色的画面给我，或许能骗过验证。'},
+ {name:'形状锁', rule:'画面里有清晰可见的圆形物体或圆形图案', ask:'第二道是形状锁。拍一个带圆形的东西，越清楚越好。'},
+ {name:'口令卡', rule:'画面里有可以辨认的数字（至少一个数字字符）', ask:'最后一道要口令。拍一张带数字的画面，什么数字都行，我读给门听。'}
+];
+const INTRO = {
+ 'Neon Void strain':{tags:['科幻','赛博朋克','近未来','世界观观光'], story:'Vice City 是一座不夜城，霓虹和全息广告下面，什么欲望都有人买单。你不小心走进了不该去的街区，被几个混混缠上，是 Pulse 把你带了出来。接下来，他会开着那辆黑色飞行汽车，带你把这座城市逛一遍。改编自同名用户剧场，设定归原作者所有。', rules:'安全的观光向剧场。不会出现事故、袭击、威胁、紧急事态或逃脱，你和 Pulse 都不会遇到危险。'},
+ '奇幻 · 祭品':{tags:['奇幻','异世界'], story:'你跟着精灵向导希尔穿过"门"，来到异世界的禁地前。石门上的符文只有收到一件祭品才会让路，而你从现实带来的东西，在这里会显露出另一副模样。'},
+ '奇幻 · 齿轮':{tags:['奇幻','异世界','机关'], story:'遗迹深处的石门正在合拢，巨大的齿轮一格一格转动。希尔需要你马上拿出一样东西卡住它，什么都行。'},
+ '恋爱':{tags:['都市','恋爱'], story:'你和顾言认识三年，关系一直停在差一步的位置。今晚你把他约到天台，说有东西要给他。'},
+ '冒险':{tags:['遗迹','冒险'], story:'你和遗迹猎人老K 找到了失落文明的地下入口。石台上有一个空着的凹槽，在这种地方，任何小物件都可能是钥匙。'},
+ '校园':{tags:['校园','日常悬念'], story:'学生会长林夏一直在查一桩流传了一年的小谜团。放学后，你带着在旧教学楼捡到的东西来到学生会室。'},
+ '悬疑':{tags:['刑侦','悬疑'], story:'一桩失踪案正在调查中。你在现场附近捡到了一样东西，周警官请你到询问室，把它放到桌上。'},
+ puzzle:{tags:['密室','谍战'], story:'你潜入一栋大楼的 B2 层，目标是走廊尽头的档案室。面前的安全门有三道锁，识别系统已经损坏。搭档乌鸦通过耳机指挥你，用身边能拍到的东西骗过验证。'}
+};
+const PUZ = {char:'乌鸦', ava:'鸦', persona:'你的潜入搭档，通过耳机远程指挥，冷静、话短、偶尔冷幽默'};
+
+const st = {
+  info:false, mode:'d2', ready:false, ok:true, needCode:false, busy:false, slow:false,
+  d1:{scene:0, per:SCENES.map(()=>({msgs:[], last:null})), file:null, url:null, bag:[]},
+  d2:{scene:0, per:SCENES.map(()=>({msgs:[], last:null, turns:[], since:0, pending:true})), bag:[]},
+  puzzle:{lock:0, msgs:[], last:null, done:false, turns:[], since:0, pending:true, askText:''}
+};
+let accessCode = '';
+try{ accessCode = localStorage.getItem('demo_access_code') || ''; }catch(_){}
+function shrink(file){
+  return new Promise((resolve, reject)=>{
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = ()=>{
+      const max = 1280, k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); reject({code:'image_rejected'}); };
+    img.src = url;
+  });
+}
+async function ask(prompt, opts){
+  const body = {prompt, code: accessCode, effort: opts && opts.modelTier==='default' ? 'medium' : 'low'};
+  if(opts && opts.images && opts.images[0]) body.image = await shrink(opts.images[0]);
+  let r;
+  try{ r = await fetch('/api/ask', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)}); }
+  catch(_){ throw {code:'upstream_error'}; }
+  const j = await r.json().catch(()=>null);
+  if(!r.ok || !j || !j.data) throw {code: (j && j.error) || 'upstream_error'};
+  return j.data;
+}
+const sample = { json: ask };
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ERR = {
+  unauthorized:'口令不对，请重新输入。',
+  not_configured:'服务端还没有配置模型接口（Key、地址或模型名）。',
+  budget_exceeded:'本月额度已用完，请联系这个 demo 的主人。',
+  too_large:'图片太大，换一张小一点的试试。',
+  rate_limited:'调用太频繁或已达用量上限，过一会儿再试。',
+  image_rejected:'这张图片用不了，换一张 JPG 或 PNG 试试。',
+  refused:'这张图片无法处理，换一张试试。',
+  invalid_json:'返回的格式有误，再发一次试试。',
+  session_expired:'登录已过期，请重新登录后再试。'
+};
+
+function transcript(S){ return S.turns.slice(-16).map(t=>t.w+'：'+t.x).join('\n'); }
+function header(sc){
+  return `剧本类型：${sc.genre}
+世界观：${sc.world}
+角色：${sc.char}。性格：${sc.persona}
+${sc.rules ? '本剧场的硬性规则（必须遵守）：' + sc.rules + '\n' : ''}`;
+}
+function summonPromptV1(sc){
+  return `你是互动剧情引擎。用户在剧情中被角色要求出示一件现实物品，并上传了一张照片（见附图）。
+
+剧本类型：${sc.genre}
+世界观：${sc.world}
+角色：${sc.char}。性格：${sc.persona}
+当前场景：${sc.setup}
+角色刚才说：「${sc.ask}」
+${sc.rules ? '本剧场的硬性规则（必须遵守）：' + sc.rules + '\n' : ''}
+请完成：
+1. 客观识别照片里的主体物品。不要识别任何人的身份，不要评价任何人的长相；如果画面主体是人，只关注其手持或身边的物品。
+2. 把这件物品转译成这个剧本里的道具：起一个符合世界观的名字，给稀有度、2 到 3 个属性、一个用途。属性必须对应物品的真实特征（材质、颜色、形状、磨损、图案、文字等）。
+3. 以角色口吻写一句回应（40 到 90 字），必须提到至少一个只有看了照片才知道的具体细节，并推动剧情。不要复述任务，不要说"照片""图片"这类词，角色是亲眼看到这件东西。
+4. 用一句话写出这件物品触发的剧情走向。
+
+如果照片全黑、过于模糊或看不出任何物品：seen 如实填写，item 设为 null，mapping 设为空数组，line 用符合人设的话请对方再拿一次。
+
+只回复一个 JSON 对象，不要任何其他文字，格式如下：
+{"seen":"客观描述，20 字以内","details":["细节1","细节2"],"mapping":[{"real":"现实特征","story":"在剧情里的含义"}],"item":{"name":"道具名","rarity":"普通|稀有|史诗|传说","attrs":[{"k":"属性名","v":"属性值"}],"use":"用途，一句话"},"line":"角色回应","branch":"剧情走向，一句话"}`;
+}
+function summonPrompt(sc, S){
+  return `你是互动剧情引擎。用户正在和角色进行一段剧情对话，此刻拿出了一件现实物品给角色看，并上传了照片（见附图）。
+
+${header(sc)}
+目前为止的剧情与对话（按顺序，"对方"指用户）：
+${transcript(S)}
+
+现在对方拿出了一件东西给${sc.char}看（见附图）。
+
+请完成：
+1. 客观识别照片里的主体物品。不要识别任何人的身份，不要评价任何人的长相；如果画面主体是人，只关注其手持或身边的物品。
+2. 把这件物品转译成这个剧本里的道具：起一个符合世界观的名字，给稀有度、2 到 3 个属性、一个用途。属性必须对应物品的真实特征（材质、颜色、形状、磨损、图案、文字等）。
+3. 以角色口吻写回应 line（40 到 90 字）。这是剧情里的一句台词，不是看图说话：
+   - 提到物品细节最多一处，不超过 15 个字，用来证明角色亲眼看到了它。不要罗列颜色、形状、材质。
+   - 重点写角色的态度和行动：他拿这件东西做了什么，或者因为它做了什么决定。
+   - 不能只用一个关于物品的问题收尾（例如"你从哪里找到的"）。不要复述任务，不要说"照片""图片"。
+   - 不要在这句话里再向对方要别的东西。
+4. 写旁白 narration（40 到 80 字，第三人称）：因为这件物品，剧情实际向前走了一步。必须发生下面至少一件事：换了地点、某件事发生了、两人的关系有了变化。要承接前面的剧情，不要重复。
+5. 用一句话概括这件物品带来的剧情走向 branch。
+
+如果照片全黑、过于模糊或看不出任何物品：seen 如实填写，item 设为 null，mapping 设为空数组，narration 设为空字符串，line 用符合人设的话请对方再拿一次。
+
+只回复一个 JSON 对象，不要任何其他文字，格式如下：
+{"seen":"客观描述，20 字以内","details":["细节1","细节2"],"mapping":[{"real":"现实特征","story":"在剧情里的含义"}],"item":{"name":"道具名","rarity":"普通|稀有|史诗|传说","attrs":[{"k":"属性名","v":"属性值"}],"use":"用途，一句话"},"line":"角色台词","narration":"旁白","branch":"剧情走向，一句话"}`;
+}
+function chatPrompt(sc, S, text){
+  return `你是互动剧情引擎，扮演角色和用户进行剧情对话。
+
+${header(sc)}
+目前为止的剧情与对话（按顺序，"对方"指用户）：
+${transcript(S)}
+
+对方刚才说：「${text}」
+距离${sc.char}上一次向对方要东西，已经过了 ${S.since} 轮对话。
+
+请完成：
+1. 以角色口吻写回应 line（20 到 80 字）。先接住对方说的话，再让剧情或关系往前走一点：透露一点新信息、做一个动作，或者提出接下来去哪、做什么。不要每一句都用提问收尾。
+2. 决定这一句是否向对方要一件现实中的东西，photo_request：
+   - 已过轮数小于 3 时，必须为 false。
+   - 已过轮数大于等于 3，并且剧情正好需要一件东西时，可以为 true。大于等于 6 时，尽量找一个自然的时机设为 true。
+   - 为 true 时，line 里要自然地提出请求并给出具体方向（例如"能发光的""你今天吃的"）。为 false 时，line 里不要让对方拿东西、拍东西或给你看东西。
+3. narration：只有场景真的发生变化（换了地点、发生了一件事）时，写一句 20 到 50 字的第三人称旁白；否则为空字符串。
+
+只回复一个 JSON 对象，不要任何其他文字，格式如下：
+{"line":"角色台词","narration":"","photo_request":false}`;
+}
+function puzzlePrompt(lk, S){
+  return `你是互动剧情引擎，负责一个密室潜入关卡的图片校验。用户上传了一张照片（见附图）。
+
+角色：${PUZ.char}。${PUZ.persona}
+目前为止的剧情与对话（按顺序，"对方"指用户）：
+${transcript(S)}
+
+当前关卡：${lk.name}
+角色刚才提出的要求：「${S.askText}」
+通关条件：${lk.rule}
+
+请完成：
+1. 客观描述照片内容。不要识别任何人的身份，不要评价任何人的长相。
+2. 判断照片是否满足通关条件。标准适度宽松：条件在画面中清楚可见就算通过；完全没有或者要靠猜才算不通过。
+3. 以角色口吻写一句回应（30 到 70 字）。通过时要点出画面里让验证通过的具体东西${lk.name==='口令卡'?'，并把你读到的数字当作口令念出来':''}；不通过时在戏里说明门没反应，并催对方再找。不要说"照片""图片"这类词。
+   通过时只写门开了之后的反应，不要布置下一个任务，不要再让对方拍任何东西。
+4. 不通过时给一句具体提示（身边常见的、可能满足条件的东西）；通过时 hint 为空字符串。
+
+只回复一个 JSON 对象，不要任何其他文字，格式如下：
+{"pass":true,"seen":"客观描述，25 字以内","evidence":"满足或不满足条件的依据，一句话","confidence":0到100的整数,"line":"角色回应","hint":""}`;
+}
+
+function puzzleChatPrompt(S, text){
+  const lk = LOCKS[S.lock];
+  return `你是互动剧情引擎，扮演角色和用户进行一段密室潜入剧情的对话。
+
+角色：${PUZ.char}。${PUZ.persona}
+背景：对方潜入一栋大楼的 B2 层，目标是走廊尽头的档案室。一路上共有三道识别系统损坏的安全锁，目前已解除 ${S.lock} 道。乌鸦通过耳机指挥。
+
+目前为止的剧情与对话（按顺序，"对方"指用户）：
+${transcript(S)}
+
+对方刚才说：「${text}」
+距离上一道锁解除，已经过了 ${S.since} 轮对话。
+下一道锁：${lk.name}。通关条件：${lk.rule}。
+
+请完成：
+1. 以角色口吻写回应 line（20 到 80 字）。先接住对方说的话，再让剧情往前走一点：继续前进、观察到环境里的东西，或者透露一点任务信息。不要每一句都用提问收尾。
+2. 决定下一道锁是否在这一句出现，trigger：
+   - 已过轮数小于 2 时，必须为 false。
+   - 已过轮数大于等于 2 且时机自然时，可以为 true。大于等于 4 时，必须为 true。
+   - 为 true 时，line 要在戏里说明遇到了新的锁，并明确告诉对方需要拍到什么（要与通关条件一致）。为 false 时，line 里不要提出任何拍摄要求。
+3. narration：只有场景真的发生变化（走到了新位置、发生了一件事）时，写一句 20 到 50 字的第三人称旁白；否则为空字符串。
+
+只回复一个 JSON 对象，不要任何其他文字，格式如下：
+{"line":"角色台词","narration":"","trigger":false}`;
+}
+
+/* ---------- render ---------- */
+function sm(){ return st.mode!=='puzzle'; }
+function G(){ return st[st.mode]; }
+function cur(){ return sm() ? G().per[G().scene] : st.puzzle; }
+function push(S, m){ S.msgs.push(m); }
+function rarClass(r){ return {'普通':'r1','稀有':'r2','史诗':'r3','传说':'r4'}[r] || 'r1'; }
+
+function renderHead(){
+  const c = sm() ? SCENES[G().scene] : PUZ;
+  $('ava').textContent = c.ava; $('cname').textContent = c.char;
+  const s = $('status'); s.textContent = st.busy ? '正在看…' : '在线'; s.className = 'status' + (st.busy?' busy':'');
+  $('locks').innerHTML = st.mode==='puzzle' ? LOCKS.map((_,i)=>`<i class="${i<st.puzzle.lock?'done':''}"></i>`).join('') + ` ${st.puzzle.lock}/3` : '';
+}
+function renderChat(){
+  $('chat').innerHTML = cur().msgs.map(m=>{
+    if(m.t==='narr') return `<div class="narr">${esc(m.x)}</div>`;
+    if(m.t==='ask') return `<div class="row ai"><div class="bubble ask">${esc(m.x)}</div><span class="need">剧情请求：一张照片</span></div>`;
+    if(m.t==='ai') return `<div class="row ai"><div class="bubble">${esc(m.x)}</div></div>`;
+    if(m.t==='me') return `<div class="row me"><div class="bubble">${esc(m.x)}</div></div>`;
+    if(m.t==='img') return `<div class="row me"><img class="photo" src="${m.url}" alt="你发送的照片"></div>`;
+    if(m.t==='typing') return `<div class="row ai"><div class="bubble"><div class="typing"><i></i><i></i><i></i></div></div></div>`;
+    if(m.t==='sys') return `<div class="sys">${esc(m.x)}</div>`;
+    if(m.t==='verdict') return `<div class="verdict ${m.ok?'ok':'no'}">${esc(m.x)}</div>`;
+    if(m.t==='item'){ const it = m.it;
+      return `<div class="item"><div class="item-top"><b>${esc(it.name)}</b><span class="rar ${rarClass(it.rarity)}">${esc(it.rarity||'普通')}</span></div>
+        <div class="attrs">${(it.attrs||[]).map(a=>`<span>${esc(a.k)}：${esc(a.v)}</span>`).join('')}</div>
+        <small>${esc(it.use)}</small>${m.branch?`<small>剧情走向：${esc(m.branch)}</small>`:''}</div>`; }
+    if(m.t==='end') return `<div class="ending"><b>三道锁全部解除</b>门开了。乌鸦在耳机里说：「干得不错，进去吧。」</div>`;
+    return '';
+  }).join('');
+  const c = $('chat'); c.scrollTop = c.scrollHeight;
+}
+function renderTray(){
+  const t = $('tray');
+  if(!st.ready){ t.innerHTML = `<span>正在连接…</span>`; return; }
+  if(st.needCode){ t.innerHTML = `<span>这个 demo 需要口令才能使用</span><div class="say"><input type="password" id="code" placeholder="输入口令" autocomplete="off"><button type="button" id="codeBtn">进入</button></div>`; return; }
+  const off = st.busy ? ' off' : '';
+  let h = '';
+  if(sm()){
+    h += `<span>${st.mode==='d1' ? '选剧本，再发一张照片。同一张照片可以换剧本重试。' : cur().pending ? SCENES[G().scene].char + ' 在等你拿出一件东西。发完照片才能继续聊天。' : '可以打字聊天，也可以随时发照片。角色需要东西时会开口要。'}</span>
+      <div class="scenes">${SCENES.map((s,i)=>`<button type="button" data-scene="${i}" aria-pressed="${i===G().scene}"${st.busy?' disabled':''}>${s.tag}</button>`).join('')}</div>`;
+  } else if(st.puzzle.done){
+    t.innerHTML = `<span>已通关</span><div class="acts"><button type="button" class="act wide" id="again">再玩一次</button></div>`; return;
+  } else {
+    h += `<span>${st.puzzle.pending ? '第 ' + (st.puzzle.lock+1) + ' 道 · ' + LOCKS[st.puzzle.lock].name + '：发一张符合条件的照片，通过后才能继续聊天。' : '门开了。可以先和乌鸦聊几句，下一道锁出现时再发照片。'}</span>`;
+  }
+  if(st.mode!=='d1' && !cur().pending) h += `<div class="say"><input type="text" id="msg" placeholder="对${sm() ? SCENES[G().scene].char : PUZ.char}说点什么" autocomplete="off" maxlength="300"${st.busy?' disabled':''}><button type="button" id="sayBtn"${st.busy?' disabled':''}>发送</button></div>`;
+  if(sm() || cur().pending) h += `<div class="acts${st.mode==='d2' && !cur().pending ?' small':''}">
+      <label class="act${off}">拍照<input type="file" id="cam" accept="image/jpeg,image/png,image/webp" capture="environment"></label>
+      <label class="act alt${off}">从相册选<input type="file" id="pick" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+      ${st.mode==='d1' && st.d1.file ? `<button type="button" class="act alt wide${off}" id="reuse">把上一张照片发给当前角色</button>` : ''}
+    </div>`;
+  h += `<label class="tier"><input type="checkbox" id="slow"${st.slow?' checked':''}> 更细腻的回复（等待更久）</label>`;
+  t.innerHTML = h;
+}
+function renderPanel(){
+  const L = cur().last; let h = '';
+  if(!L){
+    h += st.mode==='d1'
+      ? `<div class="card"><h2>Demo 1：单次召唤</h2><ol class="list"><li>角色在剧情节点开口要一件东西。</li><li>你发一张真实照片，页面连同剧本设定一起交给模型。</li><li>模型先客观识别物品，再按世界观把它转译成道具，写出角色回应和剧情走向。</li><li>每次发图互相独立，不带上下文，也不能打字。适合对比同一张照片在不同剧本里的反应。</li></ol></div>`
+      : st.mode==='d2'
+      ? `<div class="card"><h2>Demo 2：连续剧情</h2><ol class="list"><li>角色在剧情节点开口要一件东西。</li><li>你发一张真实照片，页面连同剧本设定一起交给模型。</li><li>模型先客观识别物品，再按世界观把它转译成道具，写出角色回应和剧情走向。</li><li>道具进入道具栏，剧情往前走一步。之后可以继续打字聊天，角色只在剧情需要时再要下一件东西。</li></ol></div>`
+      : `<div class="card"><h2>视觉解谜是怎么跑的</h2><ol class="list"><li>每道锁有一条明确的通关条件：蓝色、圆形、数字。</li><li>你发一张真实照片，模型判断是否满足条件，并给出依据和把握程度。</li><li>不通过时由角色在戏里催你再找，并给一句提示。</li><li>通过后可以打字聊天。聊几轮之后，下一道锁才会在剧情里出现，出现时只能发照片。</li></ol></div>`;
+  } else if(L.kind==='chat'){
+    const d = L.data;
+    h += `<div class="card"><h2>这次调用返回了什么</h2>
+      <div class="meta"><span class="tag">${esc(L.tag)}</span><span class="tag">文字对话</span><span class="tag">${L.ask?'这一句触发了图片请求':'这一句没有图片请求'}</span><span class="tag">用时 ${(L.ms/1000).toFixed(1)} 秒</span></div>
+      <p>${esc(L.note || '角色只在剧情需要时才开口要东西，并且两次请求之间至少隔三轮对话。')}</p>
+      <h3>原始返回</h3><details><summary>展开 JSON</summary><pre>${esc(JSON.stringify(d,null,2))}</pre></details></div>`;
+  } else if(L.kind==='summon'){
+    const d = L.data, it = d.item;
+    h += `<div class="card"><h2>这次调用返回了什么</h2>
+      <div class="meta"><span class="tag">${esc(L.tag)}</span><span class="tag">用时 ${(L.ms/1000).toFixed(1)} 秒</span></div>
+      <h3>① 读取：客观识别</h3><p>${esc(d.seen)}</p>${(d.details||[]).length?`<ul class="list">${d.details.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}
+      ${(d.mapping||[]).length?`<h3>② 转译：现实 → 这个剧本里的含义</h3><div class="map">${d.mapping.map(m=>`<span>${esc(m.real)}</span><span>→</span><span>${esc(m.story)}</span>`).join('')}</div>`:''}
+      <h3>③ 结果</h3><p>${it ? '生成道具「'+esc(it.name)+'」（'+esc(it.rarity||'普通')+'）' : '没有识别出可用的物品，角色请用户再给一次。'}</p>${d.branch?`<p>${esc(d.branch)}</p>`:''}
+      ${d.narration?`<h3>④ 剧情推进</h3><p>${esc(d.narration)}</p>`:''}
+      <h3>原始返回</h3><details><summary>展开 JSON</summary><pre>${esc(JSON.stringify(d,null,2))}</pre></details></div>`;
+  } else {
+    const d = L.data;
+    h += `<div class="card"><h2>这次调用返回了什么</h2>
+      <div class="meta"><span class="tag">${esc(L.tag)}</span><span class="tag ${d.pass?'ok':'no'}">${d.pass?'通过':'未通过'}</span><span class="tag">把握 ${esc(d.confidence)}%</span><span class="tag">用时 ${(L.ms/1000).toFixed(1)} 秒</span></div>
+      <h3>通关条件</h3><p>${esc(L.rule)}</p>
+      <h3>① 读取：客观识别</h3><p>${esc(d.seen)}</p>
+      <h3>② 校验依据</h3><p>${esc(d.evidence)}</p>
+      ${d.hint?`<h3>③ 给用户的提示</h3><p>${esc(d.hint)}</p>`:''}
+      <h3>原始返回</h3><details><summary>展开 JSON</summary><pre>${esc(JSON.stringify(d,null,2))}</pre></details></div>`;
+  }
+  if(sm()){
+    const bag = G().bag;
+    h += `<div class="card"><h2>道具栏</h2>${bag.length ? `<div class="bag">${bag.map(b=>`<div><img src="${b.url}" alt=""><span>${esc(b.name)}<small>${esc(b.tag)} · ${esc(b.rarity)}</small></span></div>`).join('')}</div>` : '<p style="color:var(--muted)">还没有道具。发一张照片试试。</p>'}</div>`;
+  }
+  h += `<p class="foot">照片只在你点发送时经本站后端转给模型识别，本站不保存照片。聊天记录只在你的浏览器里，刷新即清空。角色台词和道具由模型即时生成，每次结果可能不同。</p>`;
+  $('panel').innerHTML = h;
+}
+function renderInfo(){
+  const el = $('info');
+  if(!st.info){ el.hidden = true; el.innerHTML = ''; return; }
+  const sc = sm() ? SCENES[G().scene] : null, I = INTRO[sc ? sc.tag : 'puzzle'], c = sc || PUZ;
+  el.hidden = false;
+  el.innerHTML = `<div class="info-head"><b>${esc(sc ? sc.tag : '视觉解谜 · B2 档案室')}</b><button type="button" id="infoClose">关闭</button></div>
+    <div class="info-body">
+      <div class="tags">${I.tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div>
+      <div><h3>剧情简介</h3><p>${esc(I.story)}</p></div>
+      ${sc ? `<div><h3>世界观</h3><p>${esc(sc.world)}</p></div>` : ''}
+      <div><h3>角色 · ${esc(c.char)}</h3><p>${esc(c.persona)}。</p></div>
+      ${I.rules ? `<div><h3>剧场规则</h3><p>${esc(I.rules)}</p></div>` : ''}
+      ${sc ? '' : `<div><h3>通关条件</h3><p>${LOCKS.map((l,i)=>(i+1)+'. '+esc(l.name)+'：'+esc(l.rule)).join('<br>')}</p></div>`}
+    </div>`;
+}
+function renderAll(){
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.m===st.mode));
+  renderHead(); renderChat(); renderTray(); renderPanel(); renderInfo();
+}
+
+/* ---------- actions ---------- */
+function fail(S, e){
+  const code = e && e.code;
+  if(code==='unauthorized'){ st.needCode = true; accessCode = ''; try{ localStorage.removeItem('demo_access_code'); }catch(_){} }
+  push(S, {t:'sys', x: ERR[code] || '连接出了点问题，再发一次试试。'});
+}
+async function send(file, reuseUrl){
+  if(st.busy || !st.ok || !file) return;
+  const mode = st.mode, S = cur(), GG = sm() ? G() : null;
+  const url = reuseUrl || URL.createObjectURL(file);
+  push(S, {t:'img', url}); push(S, {t:'typing'});
+  st.busy = true; renderAll();
+  const t0 = performance.now(), opts = {images:[file], modelTier: st.slow ? 'default' : 'quick'};
+  try{
+    if(mode==='d1'){
+      const sc = SCENES[GG.scene]; GG.file = file; GG.url = url;
+      const d = await sample.json(summonPromptV1(sc), opts);
+      if(!d || typeof d.line!=='string') throw {code:'invalid_json'};
+      S.msgs.pop();
+      push(S, {t:'ai', x:d.line});
+      if(d.item && d.item.name){ push(S, {t:'item', it:d.item, branch:d.branch}); GG.bag.unshift({url, name:d.item.name, rarity:d.item.rarity||'普通', tag:sc.tag}); }
+      S.last = {kind:'summon', data:d, ms:performance.now()-t0, tag:sc.tag};
+    } else if(mode==='d2'){
+      const sc = SCENES[GG.scene];
+      const d = await sample.json(summonPrompt(sc, S), opts);
+      if(!d || typeof d.line!=='string') throw {code:'invalid_json'};
+      S.msgs.pop();
+      push(S, {t:'ai', x:d.line});
+      const got = d.item && d.item.name;
+      S.turns.push({w:'对方', x:'（拿出了一件东西：' + (d.seen||'看不清') + (got ? '，成为道具「' + d.item.name + '」' : '') + '）'}, {w:sc.char, x:d.line});
+      if(got){ push(S, {t:'item', it:d.item, branch:d.branch}); GG.bag.unshift({url, name:d.item.name, rarity:d.item.rarity||'普通', tag:sc.tag});
+        if(d.narration){ push(S, {t:'narr', x:d.narration}); S.turns.push({w:'旁白', x:d.narration}); }
+        S.since = 0; S.pending = false; }
+      S.last = {kind:'summon', data:d, ms:performance.now()-t0, tag:sc.tag};
+    } else {
+      const lk = LOCKS[S.lock];
+      const d = await sample.json(puzzlePrompt(lk, S), opts);
+      if(!d || typeof d.line!=='string') throw {code:'invalid_json'};
+      S.msgs.pop();
+      push(S, {t:'ai', x:d.line});
+      S.turns.push({w:'对方', x:'（发来一张照片：' + (d.seen||'看不清') + '。' + (d.pass===true ? lk.name + '验证通过，门开了' : '验证未通过') + '）'}, {w:PUZ.char, x:d.line});
+      S.last = {kind:'puzzle', data:d, ms:performance.now()-t0, tag:lk.name, rule:lk.rule};
+      if(d.pass===true){
+        push(S, {t:'verdict', ok:true, x:`验证通过 · ${lk.name}已解除`});
+        S.lock++;
+        if(S.lock < LOCKS.length){ S.pending = false; S.since = 0; }
+        else { S.done = true; push(S, {t:'end'}); }
+      } else {
+        push(S, {t:'verdict', ok:false, x:'验证未通过' + (d.hint ? ' · 提示：' + d.hint : '')});
+      }
+    }
+  }catch(e){
+    if(S.msgs.length && S.msgs[S.msgs.length-1].t==='typing') S.msgs.pop();
+    fail(S, e);
+  }
+  st.busy = false; renderAll();
+}
+async function say(){
+  const box = $('msg'); const text = box ? box.value.trim() : '';
+  if(!text || st.busy || !st.ok || st.mode==='d1' || cur().pending) return;
+  if(st.mode==='puzzle') return sayPuzzle(text);
+  const S = cur(), sc = SCENES[st.d2.scene];
+  push(S, {t:'me', x:text}); push(S, {t:'typing'});
+  st.busy = true; renderAll();
+  const t0 = performance.now();
+  try{
+    const d = await sample.json(chatPrompt(sc, S, text), {modelTier: st.slow ? 'default' : 'quick', cache:false});
+    if(!d || typeof d.line!=='string') throw {code:'invalid_json'};
+    S.msgs.pop();
+    const ask = d.photo_request===true && S.since>=3;
+    push(S, {t: ask ? 'ask' : 'ai', x:d.line});
+    S.turns.push({w:'对方', x:text}, {w:sc.char, x:d.line});
+    if(d.narration){ push(S, {t:'narr', x:d.narration}); S.turns.push({w:'旁白', x:d.narration}); }
+    S.since = ask ? 0 : S.since + 1; if(ask) S.pending = true;
+    S.last = {kind:'chat', data:d, ms:performance.now()-t0, tag:sc.tag, ask};
+  }catch(e){
+    if(S.msgs.length && S.msgs[S.msgs.length-1].t==='typing') S.msgs.pop();
+    fail(S, e);
+  }
+  st.busy = false; renderAll();
+  const b = $('msg'); if(b) b.focus();
+}
+async function sayPuzzle(text){
+  const S = st.puzzle; if(S.done) return;
+  push(S, {t:'me', x:text}); push(S, {t:'typing'});
+  st.busy = true; renderAll();
+  const t0 = performance.now();
+  try{
+    const d = await sample.json(puzzleChatPrompt(S, text), {modelTier: st.slow ? 'default' : 'quick', cache:false});
+    if(!d || typeof d.line!=='string') throw {code:'invalid_json'};
+    S.msgs.pop();
+    const ask = d.trigger===true && S.since>=2;
+    S.turns.push({w:'对方', x:text});
+    if(d.narration){ push(S, {t:'narr', x:d.narration}); S.turns.push({w:'旁白', x:d.narration}); }
+    push(S, {t: ask ? 'ask' : 'ai', x:d.line});
+    S.turns.push({w:PUZ.char, x:d.line});
+    if(ask){ S.pending = true; S.askText = d.line; S.since = 0; } else S.since++;
+    S.last = {kind:'chat', data:d, ms:performance.now()-t0, tag:'视觉解谜', ask, note:'通过一道锁后可以自由聊天。至少聊两轮之后，下一道锁才会在剧情里出现，最晚在第五轮出现。'};
+  }catch(e){
+    if(S.msgs.length && S.msgs[S.msgs.length-1].t==='typing') S.msgs.pop();
+    fail(S, e);
+  }
+  st.busy = false; renderAll();
+  const b = $('msg'); if(b) b.focus();
+}
+function initSummon(){ SCENES.forEach((sc,i)=>{ const A = st.d1.per[i]; push(A,{t:'narr',x:sc.setup}); push(A,{t:'ask',x:sc.ask});
+  const S = st.d2.per[i]; push(S,{t:'narr',x:sc.setup}); push(S,{t:'ask',x:sc.ask}); S.turns.push({w:'旁白',x:sc.setup},{w:sc.char,x:sc.ask}); }); }
+function initPuzzle(){ const S = st.puzzle; S.lock = 0; S.done = false; S.last = null; S.msgs = []; S.turns = []; S.since = 0; S.pending = true; S.askText = LOCKS[0].ask;
+  const open = 'B2 层，通往档案室的走廊。一路上有三道安全锁，第一道就在面前。';
+  push(S,{t:'narr',x:open}); push(S,{t:'ask',x:LOCKS[0].ask}); S.turns.push({w:'旁白',x:open},{w:PUZ.char,x:LOCKS[0].ask}); }
+
+document.addEventListener('change', e=>{
+  const t = e.target;
+  if(t.id==='cam' || t.id==='pick'){ const f = t.files && t.files[0]; t.value = ''; if(f) send(f); }
+  if(t.id==='slow') st.slow = t.checked;
+});
+document.addEventListener('click', e=>{
+  if(e.target.closest('#infoBtn')){ st.info = !st.info; renderInfo(); return; }
+  if(e.target.closest('#infoClose')){ st.info = false; renderInfo(); $('infoBtn').focus(); return; }
+  const m = e.target.closest('#modeSeg button');
+  if(m && !st.busy){ st.mode = m.dataset.m; renderAll(); return; }
+  const s = e.target.closest('[data-scene]');
+  if(s && !st.busy){ const i = +s.dataset.scene; if(i!==G().scene){ G().scene = i; renderAll(); } return; }
+  if(e.target.closest('#sayBtn')){ say(); return; }
+  if(e.target.closest('#codeBtn')){ saveCode(); return; }
+  if(e.target.closest('#reuse')){ send(st.d1.file, st.d1.url); return; }
+  if(e.target.closest('#again')){ initPuzzle(); renderAll(); }
+});
+
+document.addEventListener('keydown', e=>{ if(e.target.id==='code' && e.key==='Enter'){ e.preventDefault(); saveCode(); } if(e.key==='Escape' && st.info){ st.info = false; renderInfo(); } if(e.target.id==='msg' && e.key==='Enter' && !e.isComposing && e.keyCode!==229){ e.preventDefault(); say(); } });
+initSummon(); initPuzzle(); renderAll();
+function saveCode(){
+  const el = $('code'); const v = el ? el.value.trim() : ''; if(!v) return;
+  accessCode = v; try{ localStorage.setItem('demo_access_code', v); }catch(_){}
+  st.needCode = false; renderTray();
+}
+(async()=>{
+  try{
+    const r = await fetch('/api/ask'); const j = await r.json();
+    st.needCode = !!(j && j.needCode) && !accessCode;
+  }catch(_){}
+  st.ready = true; renderTray();
+})();
+</script>
+</body>
+</html>
