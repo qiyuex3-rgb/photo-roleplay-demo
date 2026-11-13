@@ -4,6 +4,7 @@ const BASE = (process.env.GATEWAY_BASE_URL || '').replace(/\/+$/, '');   // 例�
 const MODEL = process.env.GATEWAY_MODEL || '';                           // 需要支持图片输入的模型
 const PER_IP_LIMIT = Number(process.env.PER_IP_LIMIT || 40);   // 每个 IP 每 10 分钟的调用上限
 const WINDOW_MS = 10 * 60 * 1000;
+let effortRejected = false;                                    // 模型不接受推理档位参数时记住，之后不再带它，省一次往返
 const hits = new Map();                                        // 进程内计数，实例重启会清零，只是粗略防刷
 
 function limited(ip) {
@@ -61,12 +62,13 @@ module.exports = async (req, res) => {
 
   const payload = { model: MODEL, messages: [{ role: 'user', content }], max_tokens: 4000 };
   const effort = process.env.REASONING_EFFORT || (body.effort === 'medium' ? 'medium' : 'low');
-  if (effort !== 'none') payload.reasoning_effort = effort;
+  if (effort !== 'none' && !effortRejected) payload.reasoning_effort = effort;
 
   try {
     let out = await callGateway(payload);
     if (out.status === 400 && payload.reasoning_effort) {       // 有的模型不接受推理档位参数，去掉再试一次
       delete payload.reasoning_effort;
+      effortRejected = true;
       out = await callGateway(payload);
     }
     if (out.status !== 200) {

@@ -243,12 +243,12 @@ function shrink(file){
   return new Promise((resolve, reject)=>{
     const url = URL.createObjectURL(file), img = new Image();
     img.onload = ()=>{
-      const max = 1280, k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const max = 1024, k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
       const c = document.createElement('canvas');
       c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
       c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
       URL.revokeObjectURL(url);
-      resolve(c.toDataURL('image/jpeg', 0.85));
+      resolve(c.toDataURL('image/jpeg', 0.8));
     };
     img.onerror = ()=>{ URL.revokeObjectURL(url); reject({code:'image_rejected'}); };
     img.src = url;
