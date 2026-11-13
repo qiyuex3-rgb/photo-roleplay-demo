@@ -65,6 +65,7 @@ module.exports = async (req, res) => {
   if (effort !== 'none' && !effortRejected) payload.reasoning_effort = effort;
 
   try {
+    const t0 = Date.now();
     let out = await callGateway(payload);
     if (out.status === 400 && payload.reasoning_effort) {       // 有的模型不接受推理档位参数，去掉再试一次
       delete payload.reasoning_effort;
@@ -85,7 +86,8 @@ module.exports = async (req, res) => {
       console.error('unparseable reply', String(text).slice(0, 500));
       return res.status(502).json({ error: 'invalid_json' });
     }
-    return res.status(200).json({ data, model: MODEL });
+    const u = (j && j.usage) || {};
+    return res.status(200).json({ data, model: MODEL, gatewayMs: Date.now() - t0, outTokens: u.completion_tokens || null, inTokens: u.prompt_tokens || null });
   } catch (e) {
     console.error('gateway call failed', e && e.message);
     return res.status(502).json({ error: 'upstream_error' });

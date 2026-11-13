@@ -237,6 +237,8 @@ const st = {
   d2:{scene:0, per:SCENES.map(()=>({msgs:[], last:null, turns:[], since:0, pending:true})), bag:[]},
   puzzle:{lock:0, msgs:[], last:null, done:false, turns:[], since:0, pending:true, askText:''}
 };
+let lastMeta = null;
+function metaTags(L){ const m = L.meta; if(!m) return ''; return `<span class="tag">${esc(m.model||'')}</span>` + (m.gatewayMs!=null ? `<span class="tag">其中模型 ${(m.gatewayMs/1000).toFixed(1)} 秒</span>` : '') + (m.outTokens ? `<span class="tag">输出 ${esc(m.outTokens)} tokens</span>` : ''); }
 let accessCode = '';
 try{ accessCode = localStorage.getItem('demo_access_code') || ''; }catch(_){}
 function shrink(file){
@@ -262,6 +264,7 @@ async function ask(prompt, opts){
   catch(_){ throw {code:'upstream_error'}; }
   const j = await r.json().catch(()=>null);
   if(!r.ok || !j || !j.data) throw {code: (j && j.error) || 'upstream_error'};
+  lastMeta = {model: j.model, gatewayMs: j.gatewayMs, outTokens: j.outTokens, inTokens: j.inTokens};
   return j.data;
 }
 const sample = { json: ask };
@@ -329,7 +332,9 @@ ${transcript(S)}
 如果照片全黑、过于模糊或看不出任何物品：seen 如实填写，item 设为 null，mapping 设为空数组，narration 设为空字符串，line 用符合人设的话请对方再拿一次。
 
 只回复一个 JSON 对象，不要任何其他文字，格式如下：
-{"seen":"客观描述，20 字以内","details":["细节1","细节2"],"mapping":[{"real":"现实特征","story":"在剧情里的含义"}],"item":{"name":"道具名","rarity":"普通|稀有|史诗|传说","attrs":[{"k":"属性名","v":"属性值"}],"use":"用途，一句话"},"line":"角色台词","narration":"旁白","branch":"剧情走向，一句话"}`;
+{"seen":"客观描述，15 字以内","details":["细节1","细节2"],"mapping":[{"real":"现实特征","story":"在剧情里的含义"}],"item":{"name":"道具名","rarity":"普通|稀有|史诗|传说","attrs":[{"k":"属性名","v":"属性值"}],"use":"用途"},"line":"角色台词","narration":"旁白","branch":"剧情走向"}
+
+为了响应速度，除 line 和 narration 外都要极简：details 最多 2 条、每条不超过 10 个字；mapping 最多 2 条、每个字段不超过 15 个字；attrs 正好 2 个、每个值不超过 10 个字；use 和 branch 各不超过 20 个字。`;
 }
 function chatPrompt(sc, S, text){
   return `你是互动剧情引擎，扮演角色和用户进行剧情对话。
@@ -466,13 +471,13 @@ function renderPanel(){
   } else if(L.kind==='chat'){
     const d = L.data;
     h += `<div class="card"><h2>这次调用返回了什么</h2>
-      <div class="meta"><span class="tag">${esc(L.tag)}</span><span class="tag">文字对话</span><span class="tag">${L.ask?'这一句触发了图片请求':'这一句没有图片请求'}</span><span class="tag">用时 ${(L.ms/1000).toFixed(1)} 秒</span></div>
+      <div class="meta"><span class="tag">${esc(L.tag)}</span><span class="tag">文字对话</span><span class="tag">${L.ask?'这一句触发了图片请求':'这一句没有图片请求'}</span><span class="tag">用时 ${(L.ms/1000).toFixed(1)} 秒</span>${metaTags(L)}</div>
       <p>${esc(L.note || '角色只在剧情需要时才开口要东西，并且两次请求之间至少隔三轮对话。')}</p>
       <h3>原始返回</h3><details><summary>展开 JSON</summary><pre>${esc(JSON.stringify(d,null,2))}</pre></details></div>`;
   } else if(L.kind==='summon'){
     const d = L.data, it = d.item;
     h += `<div class="card"><h2>这次调用返回了什么</h2>
-      <div class="meta"><span class="tag">${esc(L.tag)}</span><span class="tag">用时 ${(L.ms/1000).toFixed(1)} 秒</span></div>
+      <div class="meta"><span class="tag">${esc(L.tag)}</span><span class="tag">用时 ${(L.ms/1000).toFixed(1)} 秒</span>${metaTags(L)}</div>
       <h3>① 读取：客观识别</h3><p>${esc(d.seen)}</p>${(d.details||[]).length?`<ul class="list">${d.details.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}
       ${(d.mapping||[]).length?`<h3>② 转译：现实 → 这个剧本里的含义</h3><div class="map">${d.mapping.map(m=>`<span>${esc(m.real)}</span><span>→</span><span>${esc(m.story)}</span>`).join('')}</div>`:''}
       <h3>③ 结果</h3><p>${it ? '生成道具「'+esc(it.name)+'」（'+esc(it.rarity||'普通')+'）' : '没有识别出可用的物品，角色请用户再给一次。'}</p>${d.branch?`<p>${esc(d.branch)}</p>`:''}
@@ -481,7 +486,7 @@ function renderPanel(){
   } else {
     const d = L.data;
     h += `<div class="card"><h2>这次调用返回了什么</h2>
-      <div class="meta"><span class="tag">${esc(L.tag)}</span><span class="tag ${d.pass?'ok':'no'}">${d.pass?'通过':'未通过'}</span><span class="tag">把握 ${esc(d.confidence)}%</span><span class="tag">用时 ${(L.ms/1000).toFixed(1)} 秒</span></div>
+      <div class="meta"><span class="tag">${esc(L.tag)}</span><span class="tag ${d.pass?'ok':'no'}">${d.pass?'通过':'未通过'}</span><span class="tag">把握 ${esc(d.confidence)}%</span><span class="tag">用时 ${(L.ms/1000).toFixed(1)} 秒</span>${metaTags(L)}</div>
       <h3>通关条件</h3><p>${esc(L.rule)}</p>
       <h3>① 读取：客观识别</h3><p>${esc(d.seen)}</p>
       <h3>② 校验依据</h3><p>${esc(d.evidence)}</p>
@@ -536,7 +541,7 @@ async function send(file, reuseUrl){
       S.msgs.pop();
       push(S, {t:'ai', x:d.line});
       if(d.item && d.item.name){ push(S, {t:'item', it:d.item, branch:d.branch}); GG.bag.unshift({url, name:d.item.name, rarity:d.item.rarity||'普通', tag:sc.tag}); }
-      S.last = {kind:'summon', data:d, ms:performance.now()-t0, tag:sc.tag};
+      S.last = {kind:'summon', data:d, ms:performance.now()-t0, meta:lastMeta, tag:sc.tag};
     } else if(mode==='d2'){
       const sc = SCENES[GG.scene];
       const d = await sample.json(summonPrompt(sc, S), opts);
@@ -548,7 +553,7 @@ async function send(file, reuseUrl){
       if(got){ push(S, {t:'item', it:d.item, branch:d.branch}); GG.bag.unshift({url, name:d.item.name, rarity:d.item.rarity||'普通', tag:sc.tag});
         if(d.narration){ push(S, {t:'narr', x:d.narration}); S.turns.push({w:'旁白', x:d.narration}); }
         S.since = 0; S.pending = false; }
-      S.last = {kind:'summon', data:d, ms:performance.now()-t0, tag:sc.tag};
+      S.last = {kind:'summon', data:d, ms:performance.now()-t0, meta:lastMeta, tag:sc.tag};
     } else {
       const lk = LOCKS[S.lock];
       const d = await sample.json(puzzlePrompt(lk, S), opts);
@@ -556,7 +561,7 @@ async function send(file, reuseUrl){
       S.msgs.pop();
       push(S, {t:'ai', x:d.line});
       S.turns.push({w:'对方', x:'（发来一张照片：' + (d.seen||'看不清') + '。' + (d.pass===true ? lk.name + '验证通过，门开了' : '验证未通过') + '）'}, {w:PUZ.char, x:d.line});
-      S.last = {kind:'puzzle', data:d, ms:performance.now()-t0, tag:lk.name, rule:lk.rule};
+      S.last = {kind:'puzzle', data:d, ms:performance.now()-t0, meta:lastMeta, tag:lk.name, rule:lk.rule};
       if(d.pass===true){
         push(S, {t:'verdict', ok:true, x:`验证通过 · ${lk.name}已解除`});
         S.lock++;
@@ -589,7 +594,7 @@ async function say(){
     S.turns.push({w:'对方', x:text}, {w:sc.char, x:d.line});
     if(d.narration){ push(S, {t:'narr', x:d.narration}); S.turns.push({w:'旁白', x:d.narration}); }
     S.since = ask ? 0 : S.since + 1; if(ask) S.pending = true;
-    S.last = {kind:'chat', data:d, ms:performance.now()-t0, tag:sc.tag, ask};
+    S.last = {kind:'chat', data:d, ms:performance.now()-t0, meta:lastMeta, tag:sc.tag, ask};
   }catch(e){
     if(S.msgs.length && S.msgs[S.msgs.length-1].t==='typing') S.msgs.pop();
     fail(S, e);
@@ -612,7 +617,7 @@ async function sayPuzzle(text){
     push(S, {t: ask ? 'ask' : 'ai', x:d.line});
     S.turns.push({w:PUZ.char, x:d.line});
     if(ask){ S.pending = true; S.askText = d.line; S.since = 0; } else S.since++;
-    S.last = {kind:'chat', data:d, ms:performance.now()-t0, tag:'视觉解谜', ask, note:'通过一道锁后可以自由聊天。至少聊两轮之后，下一道锁才会在剧情里出现，最晚在第五轮出现。'};
+    S.last = {kind:'chat', data:d, ms:performance.now()-t0, meta:lastMeta, tag:'视觉解谜', ask, note:'通过一道锁后可以自由聊天。至少聊两轮之后，下一道锁才会在剧情里出现，最晚在第五轮出现。'};
   }catch(e){
     if(S.msgs.length && S.msgs[S.msgs.length-1].t==='typing') S.msgs.pop();
     fail(S, e);
