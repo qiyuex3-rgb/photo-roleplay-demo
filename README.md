@@ -24,7 +24,8 @@
 
 ```
 public/index.html   前端页面（单文件，无构建步骤）
-api/ask.js          后端接口：可选口令、限流、转发给模型接口
+api/ask.js          后端接口（Vercel 版）：可选口令、限流、转发给模型接口
+functions/api/ask.js  同一个接口的 Cloudflare Pages 版
 vercel.json         接口超时设置
 .env.example        环境变量示例
 ```
@@ -44,6 +45,15 @@ vercel.json         接口超时设置
    | `PER_IP_LIMIT` | 否 | 每个 IP 每 10 分钟的调用上限，默认 40 |
 
 3. 点 Deploy。
+
+## 部署到 Cloudflare Pages
+
+1. 在 Cloudflare 后台进入 Workers & Pages，新建一个 Pages 项目并连接本仓库。
+2. 构建设置：Framework preset 选 None，Build command 留空，Build output directory 填 `public`。
+3. 在环境变量里添加与上表相同的变量（`GATEWAY_KEY` 建议选加密）。
+4. 部署。之后每次推送到 `main` 会自动重新部署。
+
+两个平台可以同时部署，互不影响。
 
 本地调试：`npm i -g vercel`，复制 `.env.example` 为 `.env` 并填写，然后 `vercel dev`。
 
